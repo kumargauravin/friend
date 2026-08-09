@@ -183,13 +183,13 @@ function parseRagKind(value: unknown): RagDocumentKind {
   const kind = optionalString(value) ?? 'note';
   const allowedKinds: RagDocumentKind[] = ['character-lore', 'faq', 'journal', 'note', 'web'];
 
-  if (!allowedKinds.includes(kind)) {
+  if (!allowedKinds.includes(kind as RagDocumentKind)) {
     throw Object.assign(new Error(`Field "kind" must be one of: ${allowedKinds.join(', ')}.`), {
       statusCode: 400,
     });
   }
 
-  return kind;
+  return kind as RagDocumentKind;
 }
 
 function parseMetadata(value: unknown): Record<string, string> | undefined {

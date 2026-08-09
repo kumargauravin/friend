@@ -1,16 +1,14 @@
-import { execSync } from 'child_process';
-import { join } from 'path';
+import assert from 'node:assert/strict';
+import { execSync } from 'node:child_process';
+import { join } from 'node:path';
 
-describe('CLI tests', () => {
-  it('should describe the starter architecture', () => {
-    const cliPath = join(process.cwd(), 'apps/api/dist/main.js');
+const cliPath = join(process.cwd(), 'apps/api/dist/main.js');
+const output = execSync(`FRIEND_RUN_MODE=describe node ${cliPath}`, {
+  env: { ...process.env, FRIEND_RUN_MODE: 'describe' },
+}).toString();
 
-    const output = execSync(`FRIEND_RUN_MODE=describe node ${cliPath}`, {
-      env: { ...process.env, FRIEND_RUN_MODE: 'describe' },
-    }).toString();
+assert.match(output, /agent workflow/i);
+assert.match(output, /JSON path/i);
+assert.match(output, /RAG/i);
 
-    expect(output).toMatch(/agent workflow/i);
-    expect(output).toMatch(/JSON path/i);
-    expect(output).toMatch(/RAG/i);
-  });
-});
+process.stdout.write('api-e2e smoke check passed\n');

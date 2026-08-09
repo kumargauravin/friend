@@ -278,17 +278,17 @@ export class JsonFileRepository implements AgentRepository {
         return fallback;
       }
 
-      private async readJsonOrNull<T>(path: string): Promise<T | null> {
-        try {
-          const content = await readFile(path, 'utf8');
-          return JSON.parse(content) as T;
-        } catch (error) {
-          if (isMissingFile(error)) {
-            return null;
-          }
+      throw error;
+    }
+  }
 
-          throw error;
-        }
+  private async readJsonOrNull<T>(path: string): Promise<T | null> {
+    try {
+      const content = await readFile(path, 'utf8');
+      return JSON.parse(content) as T;
+    } catch (error) {
+      if (isMissingFile(error)) {
+        return null;
       }
 
       throw error;

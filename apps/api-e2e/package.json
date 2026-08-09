@@ -2,23 +2,19 @@
   "name": "@friend-workspace/api-e2e",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "nx": {
     "implicitDependencies": [
       "@friend-workspace/api"
     ],
     "targets": {
       "e2e": {
-        "executor": "@nx/jest:jest",
-        "outputs": [
-          "{projectRoot}/test-output/jest/coverage"
-        ],
+        "executor": "nx:run-commands",
         "dependsOn": [
-          "@friend-workspace/api:build",
-          "@friend-workspace/api:serve"
+          "@friend-workspace/api:build"
         ],
         "options": {
-          "jestConfig": "apps/api-e2e/jest.config.cts",
-          "passWithNoTests": true
+          "command": "node --experimental-strip-types apps/api-e2e/src/api/api.spec.ts"
         }
       }
     }
