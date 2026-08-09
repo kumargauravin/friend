@@ -8,8 +8,10 @@ FROM docker.io/node:lts-alpine
 
 ENV HOST=0.0.0.0
 ENV PORT=3000
+ENV DATA_DIR=/app/data
 
 EXPOSE 3000
+
 
 WORKDIR /app
 
@@ -18,7 +20,7 @@ COPY dist .
 # You can remove this install step if you build with `--bundle` option.
 # The bundled output will include external dependencies.
 
-RUN npm --omit=dev -f install
+RUN npm ci --omit=dev
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch(`http://127.0.0.1:${process.env.PORT ?? 3000}/health`).then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"

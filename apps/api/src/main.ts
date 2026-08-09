@@ -6,7 +6,10 @@ import { AgentWorkflow } from '@friend-workspace/agent-core';
 import { JsonFileRepository } from '@friend-workspace/json-store';
 import type { CharacterQuestionAnswer, RagDocumentKind } from '@friend-workspace/contracts';
 
-const repository = new JsonFileRepository(resolve(process.cwd(), 'data'));
+const dataDirectory = process.env.DATA_DIR
+  ? resolve(process.env.DATA_DIR)
+  : resolve(process.cwd(), 'data');
+const repository = new JsonFileRepository(dataDirectory);
 const workflow = new AgentWorkflow(repository);
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);

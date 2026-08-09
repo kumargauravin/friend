@@ -68,4 +68,5 @@ At chat time the app searches the JSON index and injects only the top matching c
 - The API container is built from `apps/api/Dockerfile`.
 - CI runs lint, typecheck, build, and the API smoke test on pushes and pull requests to `main`.
 - The `Build and Publish API Image` workflow publishes `ghcr.io/<owner>/friend-api` on pushes to `main` and on manual dispatch.
-- Runtime defaults are `HOST=0.0.0.0` and `PORT=3000`.
+- Runtime defaults are `HOST=0.0.0.0`, `PORT=3000`, and `DATA_DIR=/app/data`.
+- Mount persistent storage to the configured `DATA_DIR` path for JSON-backed app data.
