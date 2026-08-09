@@ -222,29 +222,26 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function parseCharacterKind(value: unknown): CharacterKind | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const kind = optionalString(value);
+  const allowedKinds: CharacterKind[] = ['friend', 'teacher'];
+
+  if (!kind || !allowedKinds.includes(kind as CharacterKind)) {
+    throw Object.assign(new Error(`Field "kind" must be one of: ${allowedKinds.join(', ')}.`), {
+      statusCode: 400,
+    });
+  }
+
+  return kind as CharacterKind;
+}
+
 function parseAnswers(value: unknown): CharacterQuestionAnswer[] {
   if (!Array.isArray(value)) {
     throw Object.assign(new Error('Field "answers" must be an array.'), { statusCode: 400 });
-  }
-
-  function parseCharacterKind(value: unknown): CharacterKind | undefined {
-    if (value === undefined || value === null || value === '') {
-      return undefined;
-    }
-
-    const kind = optionalString(value);
-    const allowedKinds: CharacterKind[] = ['friend', 'teacher'];
-
-    if (!kind || !allowedKinds.includes(kind as CharacterKind)) {
-      throw Object.assign(
-        new Error(`Field "kind" must be one of: ${allowedKinds.join(', ')}.`),
-        {
-          statusCode: 400,
-        }
-      );
-    }
-
-    return kind as CharacterKind;
   }
 
   return value.map((entry, index) => {
