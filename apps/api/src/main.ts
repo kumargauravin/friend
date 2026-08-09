@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { randomBytes, scryptSync } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 
@@ -207,5 +207,7 @@ function parseMetadata(value: unknown): Record<string, string> | undefined {
 }
 
 function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex');
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(password, salt, 64).toString('hex');
+  return `scrypt$${salt}$${derivedKey}`;
 }

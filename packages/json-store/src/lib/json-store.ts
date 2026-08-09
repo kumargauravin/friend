@@ -13,6 +13,7 @@ import type {
   RagSearchQuery,
   UserRecord,
 } from '@friend-workspace/contracts';
+import { normalizeSearchTerms } from '@friend-workspace/contracts';
 
 interface MessageIndexEntry {
   id: string;
@@ -303,18 +304,6 @@ export class JsonFileRepository implements AgentRepository {
 
 function sanitizeSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9-_]/g, '-');
-}
-
-function normalizeSearchTerms(text: string): string[] {
-  return Array.from(
-    new Set(
-      text
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .split(/\s+/)
-        .filter((term) => term.length > 2)
-    )
-  );
 }
 
 function isMissingFile(error: unknown): boolean {

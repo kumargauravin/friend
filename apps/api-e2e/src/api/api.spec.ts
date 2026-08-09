@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const cliPath = join(process.cwd(), 'apps/api/dist/main.js');
-const output = execSync(`FRIEND_RUN_MODE=describe node ${cliPath}`, {
+const output = execSync(`node ${cliPath}`, {
   env: { ...process.env, FRIEND_RUN_MODE: 'describe' },
 }).toString();
 

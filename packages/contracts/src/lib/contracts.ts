@@ -185,3 +185,15 @@ export interface AgentRepository {
   saveRagDocument(document: RagDocumentRecord): Promise<RagDocumentRecord>;
   searchRagChunks(query: RagSearchQuery): Promise<RagSearchHit[]>;
 }
+
+export function normalizeSearchTerms(text: string): string[] {
+  return Array.from(
+    new Set(
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((term) => term.length > 2)
+    )
+  );
+}

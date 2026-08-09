@@ -1,21 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
+import { normalizeSearchTerms } from '@friend-workspace/contracts';
 import type { RagDocumentInput, RagDocumentRecord, RagSearchHit } from '@friend-workspace/contracts';
 
 const DEFAULT_CHUNK_WORDS = 120;
 const DEFAULT_CHUNK_OVERLAP = 24;
-
-export function normalizeSearchTerms(text: string): string[] {
-  return Array.from(
-    new Set(
-      text
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .split(/\s+/)
-        .filter((term) => term.length > 2)
-    )
-  );
-}
 
 export function chunkDocumentText(
   text: string,

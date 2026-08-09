@@ -115,7 +115,7 @@ export class AgentWorkflow {
       conversation.id,
       this.options.recentMessageLimit
     );
-    const memorySummary = await this.repository.getSummary(input.userId, conversation.id);
+    const memorySummary = (await this.repository.getSummary(input.userId, conversation.id)) ?? undefined;
     const memoryFacts = await this.repository.listMemoryFacts(
       input.userId,
       input.characterId,
@@ -251,7 +251,7 @@ export function buildPromptPackage(input: {
   character: CharacterProfile;
   user: UserRecord;
   recentMessages: ChatMessageRecord[];
-  memorySummary: ConversationSummaryRecord | null;
+  memorySummary?: ConversationSummaryRecord;
   memoryFacts: MemoryFactRecord[];
   ragContext: PromptPackage['ragContext'];
   userMessage: ChatMessageRecord;
@@ -274,7 +274,7 @@ export function buildPromptPackage(input: {
   return {
     systemInstruction: input.character.systemPrompt,
     recentMessages: input.recentMessages,
-    memorySummary: input.memorySummary ?? undefined,
+    memorySummary: input.memorySummary,
     memoryFacts: input.memoryFacts,
     ragContext: input.ragContext,
     userMessage: input.userMessage,
