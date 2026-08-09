@@ -1,5 +1,4 @@
 import { randomBytes, scryptSync } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 
@@ -8,6 +7,7 @@ import { JsonFileRepository } from '@friend-workspace/json-store';
 import type { CharacterQuestionAnswer, RagDocumentKind } from '@friend-workspace/contracts';
 
 import { createApiLlmRuntime } from './lib/vertex.js';
+import { PLAYGROUND_HTML } from './lib/ui.js';
 
 const dataDirectory = process.env.DATA_DIR
   ? resolve(process.env.DATA_DIR)
@@ -19,7 +19,6 @@ const workflow = new AgentWorkflow(repository, {
 });
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
-const uiFilePath = resolve(__dirname, 'assets', 'index.html');
 
 if (process.env.FRIEND_RUN_MODE === 'describe') {
   printDescribeMode();
@@ -44,7 +43,7 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
         request.method === 'GET' &&
         (url.pathname === '/ui' || (url.pathname === '/' && requestAcceptsHtml(request)))
       ) {
-        return sendHtml(response, 200, await readFile(uiFilePath, 'utf8'));
+        return sendHtml(response, 200, PLAYGROUND_HTML);
       }
 
       if (request.method === 'GET' && url.pathname === '/') {

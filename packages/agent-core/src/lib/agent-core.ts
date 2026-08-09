@@ -35,7 +35,7 @@ export type AgentReplyGenerator = (
 ) => Promise<string>;
 
 export class AgentWorkflow {
-  private readonly options: Required<AgentWorkflowOptions>;
+  private readonly options: Required<Omit<AgentWorkflowOptions, 'replyGenerator'>>;
   private readonly replyGenerator?: AgentReplyGenerator;
 
   constructor(private readonly repository: AgentRepository, options: AgentWorkflowOptions = {}) {

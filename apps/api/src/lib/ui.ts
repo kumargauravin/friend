@@ -1,4 +1,4 @@
-<!doctype html>
+export const PLAYGROUND_HTML = `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -151,63 +151,77 @@
       const ragForm = document.getElementById('rag-form');
       const chatForm = document.getElementById('chat-form');
 
-      refreshRuntime();
+      refreshRuntime().catch(reportError);
       renderState();
 
       setupForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const formData = new FormData(setupForm);
-        const user = await requestJson('/users', {
-          email: formData.get('email'),
-          password: formData.get('password'),
-        });
-        state.userId = user.id;
+        try {
+          const formData = new FormData(setupForm);
+          const user = await requestJson('/users', {
+            email: formData.get('email'),
+            password: formData.get('password'),
+          });
+          state.userId = user.id;
 
-        const character = await requestJson('/characters', {
-          userId: user.id,
-          name: formData.get('characterName'),
-          description: formData.get('description'),
-          answers: buildAnswers(
-            String(formData.get('characterName') || ''),
-            String(formData.get('characterTone') || ''),
-            String(formData.get('description') || '')
-          ),
-        });
-        state.characterId = character.id;
-        state.conversationId = '';
-        transcript.textContent = 'User and character created. Ready to chat.';
-        renderState();
+          const character = await requestJson('/characters', {
+            userId: user.id,
+            name: formData.get('characterName'),
+            description: formData.get('description'),
+            answers: buildAnswers(
+              String(formData.get('characterName') || ''),
+              String(formData.get('characterTone') || ''),
+              String(formData.get('description') || '')
+            ),
+          });
+          state.characterId = character.id;
+          state.conversationId = '';
+          transcript.textContent = 'User and character created. Ready to chat.';
+          renderState();
+        } catch (error) {
+          reportError(error);
+        }
       });
 
       ragForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        ensureSetup();
-        const formData = new FormData(ragForm);
-        await requestJson('/rag/documents', {
-          userId: state.userId,
-          characterId: state.characterId,
-          title: formData.get('title'),
-          kind: formData.get('kind'),
-          content: formData.get('content'),
-        });
-        transcript.textContent += '\n[RAG] Document saved.';
+        try {
+          ensureSetup();
+          const formData = new FormData(ragForm);
+          await requestJson('/rag/documents', {
+            userId: state.userId,
+            characterId: state.characterId,
+            title: formData.get('title'),
+            kind: formData.get('kind'),
+            content: formData.get('content'),
+          });
+          transcript.textContent += '\\n[RAG] Document saved.';
+        } catch (error) {
+          reportError(error);
+        }
       });
 
       chatForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        ensureSetup();
-        const formData = new FormData(chatForm);
-        const result = await requestJson('/chat', {
-          userId: state.userId,
-          characterId: state.characterId,
-          conversationId: state.conversationId || undefined,
-          message: formData.get('message'),
-        });
-        state.conversationId = result.conversation.id;
-        transcript.textContent =
-          `USER: ${result.userMessage.content}\n\nASSISTANT: ${result.assistantMessage.content}\n\n` +
-          `SUMMARY UPDATED: ${result.summaryUpdated}\nLLM MODE: ${result.assistantMessage.content.includes('demo reply') ? 'local demo reply' : 'vertex or configured model'}`;
-        renderState();
+        try {
+          ensureSetup();
+          const formData = new FormData(chatForm);
+          const result = await requestJson('/chat', {
+            userId: state.userId,
+            characterId: state.characterId,
+            conversationId: state.conversationId || undefined,
+            message: formData.get('message'),
+          });
+          state.conversationId = result.conversation.id;
+          transcript.textContent =
+            'USER: ' + result.userMessage.content + '\\n\\n' +
+            'ASSISTANT: ' + result.assistantMessage.content + '\\n\\n' +
+            'SUMMARY UPDATED: ' + result.summaryUpdated + '\\nLLM MODE: ' +
+            (result.assistantMessage.content.includes('demo reply') ? 'local demo reply' : 'vertex or configured model');
+          renderState();
+        } catch (error) {
+          reportError(error);
+        }
       });
 
       async function refreshRuntime() {
@@ -223,6 +237,11 @@
 
       function renderState() {
         sessionState.textContent = JSON.stringify(state, null, 2);
+      }
+
+      function reportError(error) {
+        const message = error instanceof Error ? error.message : String(error);
+        transcript.textContent = '[error] ' + message;
       }
 
       function buildAnswers(name, tone, description) {
@@ -245,14 +264,14 @@
         ];
 
         return prompts.map((question, index) => ({
-          questionId: `q-${index + 1}`,
+          questionId: 'q-' + (index + 1),
           question,
           answer:
             index === 0
-              ? `${name} is ${description}`
+              ? name + ' is ' + description
               : index === 2
                 ? tone
-                : `${name} should stay aligned with this guidance: ${description}`,
+                : name + ' should stay aligned with this guidance: ' + description,
         }));
       }
 
@@ -264,10 +283,10 @@
         });
         const payload = await response.json();
         if (!response.ok) {
-          throw new Error(payload.error || `Request failed for ${path}`);
+          throw new Error(payload.error || 'Request failed for ' + path);
         }
         return payload;
       }
     </script>
   </body>
-</html>
+</html>`;

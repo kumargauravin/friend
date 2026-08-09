@@ -159,6 +159,10 @@ export interface AgentWorkflowOptions {
   memoryFactLimit?: number;
   ragResultLimit?: number;
   summaryMessageInterval?: number;
+  replyGenerator?: (input: {
+    character: CharacterProfile;
+    promptPackage: PromptPackage;
+  }) => Promise<string>;
 }
 
 export interface AgentRepository {

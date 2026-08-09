@@ -60,6 +60,9 @@ try {
     characterId: characterResponse.id,
     message: 'Call me Gav and remember that I like TypeScript.',
   });
+  assert.ok(chatResponse.userMessage);
+  assert.ok(chatResponse.assistantMessage);
+  assert.ok(chatResponse.conversation);
   assert.equal(chatResponse.userMessage.role, 'user');
   assert.equal(chatResponse.assistantMessage.role, 'assistant');
   assert.ok(chatResponse.conversation.id);
@@ -77,7 +80,9 @@ async function waitForServer(url: string): Promise<void> {
       if (response.ok) {
         return;
       }
-    } catch {}
+    } catch {
+      // retry until the server is ready
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
@@ -85,7 +90,17 @@ async function waitForServer(url: string): Promise<void> {
   throw new Error(`Server did not become ready: ${url}`);
 }
 
-async function postJson(url: string, body: unknown): Promise<any> {
+interface JsonApiResponse {
+  id?: string;
+  llmMode?: string;
+  uiPath?: string;
+  conversation?: { id: string };
+  userMessage?: { role: string; content: string };
+  assistantMessage?: { role: string; content: string };
+  error?: string;
+}
+
+async function postJson(url: string, body: unknown): Promise<JsonApiResponse> {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -93,7 +108,7 @@ async function postJson(url: string, body: unknown): Promise<any> {
     },
     body: JSON.stringify(body),
   });
-  const payload = await response.json();
+  const payload = (await response.json()) as JsonApiResponse;
   assert.equal(response.ok, true, JSON.stringify(payload));
   return payload;
 }
