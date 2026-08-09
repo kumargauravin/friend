@@ -132,7 +132,12 @@ async function readJsonBody(request: IncomingMessage): Promise<Record<string, un
   }
 
   const bodyText = Buffer.concat(chunks).toString('utf8');
-  return JSON.parse(bodyText) as Record<string, unknown>;
+
+  try {
+    return JSON.parse(bodyText) as Record<string, unknown>;
+  } catch {
+    throw Object.assign(new Error('Request body must be valid JSON.'), { statusCode: 400 });
+  }
 }
 
 function sendJson(
