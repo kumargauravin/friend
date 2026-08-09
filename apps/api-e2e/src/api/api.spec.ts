@@ -45,6 +45,7 @@ try {
 
   const characterResponse = await postJson(`http://127.0.0.1:${port}/characters`, {
     userId: userResponse.id,
+    kind: 'friend',
     name: 'Mira',
     description: 'Helpful AI friend',
     answers: Array.from({ length: 15 }, (_, index) => ({
@@ -54,10 +55,36 @@ try {
     })),
   });
   assert.ok(characterResponse.id);
+  assert.equal(characterResponse.kind, 'friend');
+
+  const teacherResponse = await postJson(`http://127.0.0.1:${port}/characters`, {
+    userId: userResponse.id,
+    kind: 'teacher',
+    name: 'Ms. Anika',
+    description: 'Patient AI teacher',
+    answers: Array.from({ length: 15 }, (_, index) => ({
+      questionId: `q-${index + 1}`,
+      question: `Teacher question ${index + 1}`,
+      answer: 'Explain step by step for kids.',
+    })),
+  });
+  assert.ok(teacherResponse.id);
+  assert.equal(teacherResponse.kind, 'teacher');
+
+  const charactersResponse = await fetch(
+    `http://127.0.0.1:${port}/users/${userResponse.id}/characters`
+  );
+  assert.equal(charactersResponse.status, 200);
+  const characters = (await charactersResponse.json()) as Array<{ id: string; kind: string; name: string }>;
+  assert.equal(characters.length, 2);
+  assert.deepEqual(
+    characters.map((character) => character.kind),
+    ['friend', 'teacher']
+  );
 
   const chatResponse = await postJson(`http://127.0.0.1:${port}/chat`, {
     userId: userResponse.id,
-    characterId: characterResponse.id,
+    characterId: teacherResponse.id,
     message: 'Call me Gav and remember that I like TypeScript.',
   });
   assert.ok(chatResponse.userMessage);
@@ -66,6 +93,7 @@ try {
   assert.equal(chatResponse.userMessage.role, 'user');
   assert.equal(chatResponse.assistantMessage.role, 'assistant');
   assert.ok(chatResponse.conversation.id);
+  assert.match(chatResponse.assistantMessage.content, /teacher perspective|teacher demo reply/i);
 
   process.stdout.write('api-e2e smoke check passed\n');
 } finally {
@@ -92,6 +120,8 @@ async function waitForServer(url: string): Promise<void> {
 
 interface JsonApiResponse {
   id?: string;
+  kind?: string;
+  name?: string;
   llmMode?: string;
   uiPath?: string;
   conversation?: { id: string };

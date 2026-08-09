@@ -70,15 +70,31 @@ export class AgentWorkflow {
     const character: CharacterProfile = {
       id: randomUUID(),
       userId: input.userId,
+      kind: input.kind,
       name: input.name,
       description: input.description,
-      systemPrompt: buildCharacterSystemPrompt(input.name, input.description, input.answers),
+      systemPrompt: buildCharacterSystemPrompt(
+        input.kind,
+        input.name,
+        input.description,
+        input.answers
+      ),
       answers: input.answers,
       createdAt: now,
       updatedAt: now,
     };
 
     return this.repository.saveCharacter(character);
+  }
+
+  async listCharacters(userId: string, kind?: CharacterProfile['kind']): Promise<CharacterProfile[]> {
+    const existingUser = await this.repository.getUser(userId);
+
+    if (!existingUser) {
+      throw createWorkflowError(404, `User ${userId} was not found.`);
+    }
+
+    return this.repository.listCharacters(userId, kind);
   }
 
   async ingestRagDocument(input: RagDocumentInput) {
@@ -216,6 +232,7 @@ export class AgentWorkflow {
   describeStarterArchitecture(): string[] {
     return [
       'This starter keeps the whole workflow in one Nx repo: API app, shared contracts, agent logic, storage, and RAG helpers.',
+      'The API app is the isolated release unit, so you can keep the repository public while deploying one contained service.',
       'The app learns through retrieval and summarization, not by retraining on every message.',
       'JSON storage is acceptable for low traffic and single-writer learning projects, but move to a database before multi-instance concurrency.',
       ...describeRagStorageStrategy(),
@@ -242,10 +259,15 @@ export class AgentWorkflow {
 }
 
 export function buildCharacterSystemPrompt(
+  kind: CharacterProfile['kind'],
   name: string,
   description: string,
   answers: CharacterProfile['answers']
 ): string {
+  const roleInstruction =
+    kind === 'teacher'
+      ? 'You are a teacher helping children learn with calm, age-appropriate, step-by-step guidance.'
+      : 'You are a caring AI friend offering warm, encouraging, peer-like support.';
   const answerBlock = answers
     .slice(0, CHARACTER_QUESTION_COUNT)
     .map((item, index) => `${index + 1}. ${item.question}: ${item.answer}`)
@@ -253,6 +275,7 @@ export function buildCharacterSystemPrompt(
 
   return [
     `You are ${name}.`,
+    roleInstruction,
     description,
     'Stay consistent with the saved character design below.',
     answerBlock,
@@ -308,9 +331,14 @@ export function buildPromptPackage(input: {
 export function createLocalDemoReply(character: CharacterProfile, promptPackage: PromptPackage): string {
   const strongestFact = promptPackage.memoryFacts[0]?.fact ?? 'no saved facts yet';
   const strongestRag = promptPackage.ragContext[0]?.documentTitle ?? 'no RAG source';
+  const perspective =
+    character.kind === 'teacher'
+      ? 'Teacher perspective: explain clearly, teach gently, and help a child understand the idea step by step.'
+      : 'Friend perspective: respond warmly, stay relatable, and support the child like a trusted buddy.';
 
   return [
-    `${character.name} demo reply: in production this is where a hosted LLM such as Gemini would answer.`,
+    `${character.name} ${character.kind} demo reply: in production this is where a hosted LLM such as Gemini would answer.`,
+    perspective,
     `Memory recalled: ${strongestFact}.`,
     `RAG source used: ${strongestRag}.`,
     `Latest user message: "${promptPackage.userMessage.content}".`,

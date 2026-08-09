@@ -15,7 +15,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
         color: #172033;
       }
       main {
-        max-width: 960px;
+        max-width: 1080px;
         margin: 0 auto;
         padding: 24px;
       }
@@ -72,34 +72,75 @@ export const PLAYGROUND_HTML = `<!doctype html>
       .muted {
         color: #475569;
       }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
     <main>
       <section>
         <h1>friend api playground</h1>
-        <p class="muted">Create a user, seed a character, optionally add RAG content, then run chat turns against the API.</p>
+        <p class="muted">Set up one admin demo user, add multiple friend or teacher characters, compare their behavior, optionally attach RAG notes, then run chat turns.</p>
         <div class="status" id="runtime-status">Loading runtime info…</div>
       </section>
 
       <section>
-        <h2>1. Setup demo user and character</h2>
+        <h2>1. Setup admin demo user</h2>
         <form id="setup-form">
           <div class="row">
             <label>Email <input name="email" type="email" value="demo@example.com" required /></label>
             <label>Password <input name="password" type="password" value="demo-pass-123" required /></label>
           </div>
-          <div class="row">
-            <label>Character name <input name="characterName" type="text" value="Mira" required /></label>
-            <label>Character tone <input name="characterTone" type="text" value="Warm, practical, and curious" required /></label>
-          </div>
-          <label>Character description <textarea name="description" required>Mira is a supportive AI friend who keeps answers grounded in saved memory and retrieved notes.</textarea></label>
-          <button type="submit">Create user and character</button>
+          <button type="submit">Create admin demo user</button>
         </form>
       </section>
 
       <section>
-        <h2>2. Optional RAG note</h2>
+        <h2>2. Admin: add friend or teacher</h2>
+        <form id="character-form">
+          <div class="row">
+            <label>Character type
+              <select name="kind" id="character-kind">
+                <option value="friend">friend</option>
+                <option value="teacher">teacher</option>
+              </select>
+            </label>
+            <label>Character name <input name="characterName" type="text" value="Mira" required /></label>
+            <label>Character tone <input name="characterTone" type="text" value="Warm, practical, and curious" required /></label>
+          </div>
+          <label>Character description <textarea name="description" required>Mira is a supportive AI friend who keeps answers grounded in saved memory and retrieved notes.</textarea></label>
+          <button type="submit" id="character-submit">Add friend</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>3. Character roster</h2>
+        <div class="row">
+          <label>Active character
+            <select id="character-picker">
+              <option value="">Create a character first</option>
+            </select>
+          </label>
+          <button type="button" class="secondary" id="refresh-characters">Refresh characters</button>
+        </div>
+        <div class="pill-row" id="character-pills"></div>
+        <pre id="character-detail">No active character yet.</pre>
+      </section>
+
+      <section>
+        <h2>4. Optional RAG note</h2>
         <form id="rag-form">
           <div class="row">
             <label>Document title <input name="title" type="text" value="Favorite topics" /></label>
@@ -113,13 +154,13 @@ export const PLAYGROUND_HTML = `<!doctype html>
               </select>
             </label>
           </div>
-          <label>Content <textarea name="content">The user likes hiking, TypeScript, and weekend coffee walks. Prefer concise but thoughtful answers.</textarea></label>
-          <button type="submit" class="secondary">Save RAG document</button>
+          <label>Content <textarea name="content">The child likes hiking, TypeScript, and weekend coffee walks. Prefer concise but thoughtful answers.</textarea></label>
+          <button type="submit" class="secondary">Save RAG document for active character</button>
         </form>
       </section>
 
       <section>
-        <h2>3. Chat</h2>
+        <h2>5. Chat</h2>
         <form id="chat-form">
           <label>Message <textarea name="message" required>Hello! Call me Gav and remember I like TypeScript and hiking.</textarea></label>
           <button type="submit">Send chat turn</button>
@@ -138,20 +179,43 @@ export const PLAYGROUND_HTML = `<!doctype html>
     </main>
 
     <script>
+      const defaultsByKind = {
+        friend: {
+          name: 'Mira',
+          tone: 'Warm, practical, and curious',
+          description: 'Mira is a supportive AI friend who keeps answers grounded in saved memory and retrieved notes.'
+        },
+        teacher: {
+          name: 'Ms. Anika',
+          tone: 'Calm, encouraging, and step-by-step',
+          description: 'Ms. Anika is a patient AI teacher who explains ideas for kids in a clear, age-appropriate way while staying grounded in saved memory and retrieved notes.'
+        }
+      };
+
       const state = {
         userId: '',
         characterId: '',
         conversationId: '',
+        characters: [],
       };
 
       const runtimeStatus = document.getElementById('runtime-status');
       const sessionState = document.getElementById('session-state');
       const transcript = document.getElementById('transcript');
+      const characterDetail = document.getElementById('character-detail');
+      const characterPills = document.getElementById('character-pills');
       const setupForm = document.getElementById('setup-form');
+      const characterForm = document.getElementById('character-form');
+      const characterKindInput = document.getElementById('character-kind');
+      const characterSubmit = document.getElementById('character-submit');
+      const characterPicker = document.getElementById('character-picker');
+      const refreshCharactersButton = document.getElementById('refresh-characters');
       const ragForm = document.getElementById('rag-form');
       const chatForm = document.getElementById('chat-form');
 
       refreshRuntime().catch(reportError);
+      applyCharacterDefaults('friend', false);
+      renderCharacters();
       renderState();
 
       setupForm.addEventListener('submit', async (event) => {
@@ -163,30 +227,68 @@ export const PLAYGROUND_HTML = `<!doctype html>
             password: formData.get('password'),
           });
           state.userId = user.id;
-
-          const character = await requestJson('/characters', {
-            userId: user.id,
-            name: formData.get('characterName'),
-            description: formData.get('description'),
-            answers: buildAnswers(
-              String(formData.get('characterName') || ''),
-              String(formData.get('characterTone') || ''),
-              String(formData.get('description') || '')
-            ),
-          });
-          state.characterId = character.id;
+          state.characterId = '';
           state.conversationId = '';
-          transcript.textContent = 'User and character created. Ready to chat.';
+          state.characters = [];
+          transcript.textContent = 'Admin demo user created. Add a friend or teacher to begin.';
+          renderCharacters();
           renderState();
         } catch (error) {
           reportError(error);
         }
       });
 
+      characterKindInput.addEventListener('change', () => {
+        applyCharacterDefaults(characterKindInput.value, true);
+      });
+
+      characterForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          ensureUserSetup();
+          const formData = new FormData(characterForm);
+          const kind = String(formData.get('kind') || 'friend');
+          const name = String(formData.get('characterName') || '');
+          const tone = String(formData.get('characterTone') || '');
+          const description = String(formData.get('description') || '');
+          const character = await requestJson('/characters', {
+            userId: state.userId,
+            kind,
+            name,
+            description,
+            answers: buildAnswers(kind, name, tone, description),
+          });
+          await refreshCharacters(character.id);
+          transcript.textContent = 'Created ' + kind + ' character "' + character.name + '". Ready to compare perspectives.';
+        } catch (error) {
+          reportError(error);
+        }
+      });
+
+      refreshCharactersButton.addEventListener('click', async () => {
+        try {
+          ensureUserSetup();
+          await refreshCharacters(state.characterId || undefined);
+          transcript.textContent = 'Character roster refreshed.';
+        } catch (error) {
+          reportError(error);
+        }
+      });
+
+      characterPicker.addEventListener('change', () => {
+        state.characterId = characterPicker.value;
+        state.conversationId = '';
+        transcript.textContent = activeCharacter()
+          ? 'Switched to ' + activeCharacter().kind + ' "' + activeCharacter().name + '".'
+          : 'No active character selected.';
+        renderCharacters();
+        renderState();
+      });
+
       ragForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          ensureSetup();
+          ensureCharacterSetup();
           const formData = new FormData(ragForm);
           await requestJson('/rag/documents', {
             userId: state.userId,
@@ -195,7 +297,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
             kind: formData.get('kind'),
             content: formData.get('content'),
           });
-          transcript.textContent += '\\n[RAG] Document saved.';
+          transcript.textContent += '\\n[RAG] Document saved for ' + activeCharacter().name + '.';
         } catch (error) {
           reportError(error);
         }
@@ -204,7 +306,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
       chatForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          ensureSetup();
+          ensureCharacterSetup();
           const formData = new FormData(chatForm);
           const result = await requestJson('/chat', {
             userId: state.userId,
@@ -213,7 +315,9 @@ export const PLAYGROUND_HTML = `<!doctype html>
             message: formData.get('message'),
           });
           state.conversationId = result.conversation.id;
+          const selected = activeCharacter();
           transcript.textContent =
+            'ACTIVE CHARACTER: ' + selected.name + ' (' + selected.kind + ')\\n\\n' +
             'USER: ' + result.userMessage.content + '\\n\\n' +
             'ASSISTANT: ' + result.assistantMessage.content + '\\n\\n' +
             'SUMMARY UPDATED: ' + result.summaryUpdated + '\\nLLM MODE: ' +
@@ -229,14 +333,78 @@ export const PLAYGROUND_HTML = `<!doctype html>
         runtimeStatus.textContent = JSON.stringify(metadata, null, 2);
       }
 
-      function ensureSetup() {
-        if (!state.userId || !state.characterId) {
-          throw new Error('Create the demo user and character first.');
+      async function refreshCharacters(preferredCharacterId) {
+        const query = state.userId ? '/users/' + encodeURIComponent(state.userId) + '/characters' : '';
+        const characters = await fetch(query).then((response) => response.json());
+        state.characters = Array.isArray(characters) ? characters : [];
+        const nextCharacterId =
+          preferredCharacterId && state.characters.some((character) => character.id === preferredCharacterId)
+            ? preferredCharacterId
+            : state.characterId && state.characters.some((character) => character.id === state.characterId)
+              ? state.characterId
+              : state.characters[0]?.id || '';
+        state.characterId = nextCharacterId;
+        state.conversationId = '';
+        renderCharacters();
+        renderState();
+      }
+
+      function ensureUserSetup() {
+        if (!state.userId) {
+          throw new Error('Create the admin demo user first.');
+        }
+      }
+
+      function ensureCharacterSetup() {
+        ensureUserSetup();
+        if (!state.characterId) {
+          throw new Error('Create or select a friend or teacher first.');
         }
       }
 
       function renderState() {
-        sessionState.textContent = JSON.stringify(state, null, 2);
+        sessionState.textContent = JSON.stringify({
+          userId: state.userId,
+          characterId: state.characterId,
+          conversationId: state.conversationId,
+          activeCharacter: activeCharacter(),
+          characterCount: state.characters.length,
+        }, null, 2);
+      }
+
+      function renderCharacters() {
+        characterPicker.innerHTML = '';
+
+        if (!state.characters.length) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = state.userId ? 'No characters yet' : 'Create the admin demo user first';
+          characterPicker.appendChild(option);
+          characterPills.innerHTML = '';
+          characterDetail.textContent = 'No active character yet.';
+          return;
+        }
+
+        state.characters.forEach((character) => {
+          const option = document.createElement('option');
+          option.value = character.id;
+          option.textContent = character.name + ' (' + character.kind + ')';
+          option.selected = character.id === state.characterId;
+          characterPicker.appendChild(option);
+        });
+
+        characterPills.innerHTML = state.characters
+          .map((character) => '<span class="pill">' + character.kind + ': ' + escapeHtml(character.name) + '</span>')
+          .join('');
+
+        const selected = activeCharacter();
+        characterDetail.textContent = selected
+          ? JSON.stringify(selected, null, 2)
+          : 'No active character yet.';
+      }
+
+      function activeCharacter() {
+        return state.characters.find((character) => character.id === state.characterId) || null;
       }
 
       function reportError(error) {
@@ -244,7 +412,26 @@ export const PLAYGROUND_HTML = `<!doctype html>
         transcript.textContent = '[error] ' + message;
       }
 
-      function buildAnswers(name, tone, description) {
+      function applyCharacterDefaults(kind, overwriteExistingValues) {
+        const defaults = defaultsByKind[kind] || defaultsByKind.friend;
+        const nameInput = characterForm.elements.namedItem('characterName');
+        const toneInput = characterForm.elements.namedItem('characterTone');
+        const descriptionInput = characterForm.elements.namedItem('description');
+
+        if (overwriteExistingValues || !nameInput.value.trim()) {
+          nameInput.value = defaults.name;
+        }
+        if (overwriteExistingValues || !toneInput.value.trim()) {
+          toneInput.value = defaults.tone;
+        }
+        if (overwriteExistingValues || !descriptionInput.value.trim()) {
+          descriptionInput.value = defaults.description;
+        }
+
+        characterSubmit.textContent = kind === 'teacher' ? 'Add teacher' : 'Add friend';
+      }
+
+      function buildAnswers(kind, name, tone, description) {
         const prompts = [
           'Who are you?',
           'How should you greet the user?',
@@ -266,13 +453,41 @@ export const PLAYGROUND_HTML = `<!doctype html>
         return prompts.map((question, index) => ({
           questionId: 'q-' + (index + 1),
           question,
-          answer:
-            index === 0
-              ? name + ' is ' + description
-              : index === 2
-                ? tone
-                : name + ' should stay aligned with this guidance: ' + description,
+          answer: answerForPrompt(kind, name, tone, description, index),
         }));
+      }
+
+      function answerForPrompt(kind, name, tone, description, index) {
+        if (index === 0) {
+          return kind === 'teacher'
+            ? name + ' is a teacher persona. ' + description
+            : name + ' is a friend persona. ' + description;
+        }
+        if (index === 1) {
+          return kind === 'teacher'
+            ? 'Greet the child warmly, introduce yourself like a teacher, and invite the child to learn together.'
+            : 'Greet the child warmly, sound like a supportive friend, and keep the conversation easy to join.';
+        }
+        if (index === 2) {
+          return tone;
+        }
+        if (index === 3) {
+          return kind === 'teacher'
+            ? 'Do not shame, overwhelm, or use advanced explanations without breaking them down for a child.'
+            : 'Do not sound judgmental, cold, or overly formal.';
+        }
+        if (index === 9) {
+          return kind === 'teacher'
+            ? name + ' should teach with clear steps, examples, and gentle encouragement.'
+            : name + ' should feel like a caring buddy who remembers what matters to the child.';
+        }
+        if (index === 14) {
+          return kind === 'teacher'
+            ? 'Help kids understand answers from a teacher perspective while staying grounded in saved facts and retrieved notes.'
+            : 'Help kids feel supported from a friend perspective while staying grounded in saved facts and retrieved notes.';
+        }
+
+        return name + ' should stay aligned with this guidance: ' + description;
       }
 
       async function requestJson(path, body) {
@@ -286,6 +501,13 @@ export const PLAYGROUND_HTML = `<!doctype html>
           throw new Error(payload.error || 'Request failed for ' + path);
         }
         return payload;
+      }
+
+      function escapeHtml(text) {
+        return text
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
       }
     </script>
   </body>

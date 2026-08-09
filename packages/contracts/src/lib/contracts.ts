@@ -5,6 +5,7 @@ export const DEFAULT_RAG_RESULT_LIMIT = 4;
 export const DEFAULT_SUMMARY_MESSAGE_INTERVAL = 6;
 
 export type ChatRole = 'system' | 'user' | 'assistant';
+export type CharacterKind = 'friend' | 'teacher';
 export type RagDocumentKind = 'character-lore' | 'faq' | 'journal' | 'note' | 'web';
 
 export interface CharacterQuestionAnswer {
@@ -23,6 +24,7 @@ export interface UserRecord {
 export interface CharacterProfile {
   id: string;
   userId: string;
+  kind: CharacterKind;
   name: string;
   description: string;
   systemPrompt: string;
@@ -133,6 +135,7 @@ export interface CreateUserInput {
 
 export interface CreateCharacterInput {
   userId: string;
+  kind: CharacterKind;
   name: string;
   description: string;
   answers: CharacterQuestionAnswer[];
@@ -170,6 +173,7 @@ export interface AgentRepository {
   getUser(userId: string): Promise<UserRecord | null>;
   saveCharacter(character: CharacterProfile): Promise<CharacterProfile>;
   getCharacter(userId: string, characterId: string): Promise<CharacterProfile | null>;
+  listCharacters(userId: string, kind?: CharacterKind): Promise<CharacterProfile[]>;
   saveConversation(conversation: ConversationRecord): Promise<ConversationRecord>;
   getConversation(userId: string, conversationId: string): Promise<ConversationRecord | null>;
   appendMessage(message: ChatMessageRecord): Promise<ChatMessageRecord>;

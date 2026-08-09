@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 
 import type {
@@ -58,6 +58,30 @@ export class JsonFileRepository implements AgentRepository {
 
   async getCharacter(userId: string, characterId: string): Promise<CharacterProfile | null> {
     return this.readJsonOrNull(this.characterPath(userId, characterId));
+  }
+
+  async listCharacters(userId: string, kind?: CharacterProfile['kind']): Promise<CharacterProfile[]> {
+    try {
+      const entries = await readdir(this.charactersRoot(userId), { withFileTypes: true });
+      const characters = await Promise.all(
+        entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+          .map((entry) => this.readJsonOrNull<CharacterProfile>(join(this.charactersRoot(userId), entry.name)))
+      );
+
+      return characters
+        .filter(
+          (character): character is CharacterProfile =>
+            character !== null && (kind === undefined || character.kind === kind)
+        )
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.name.localeCompare(right.name));
+    } catch (error) {
+      if (isMissingFile(error)) {
+        return [];
+      }
+
+      throw error;
+    }
   }
 
   async saveConversation(conversation: ConversationRecord): Promise<ConversationRecord> {
@@ -235,7 +259,11 @@ export class JsonFileRepository implements AgentRepository {
   }
 
   private characterPath(userId: string, characterId: string): string {
-    return join(this.userRoot(userId), 'characters', `${sanitizeSegment(characterId)}.json`);
+    return join(this.charactersRoot(userId), `${sanitizeSegment(characterId)}.json`);
+  }
+
+  private charactersRoot(userId: string): string {
+    return join(this.userRoot(userId), 'characters');
   }
 
   private conversationRoot(userId: string, conversationId: string): string {

@@ -4,7 +4,11 @@ import { resolve } from 'node:path';
 
 import { AgentWorkflow } from '@friend-workspace/agent-core';
 import { JsonFileRepository } from '@friend-workspace/json-store';
-import type { CharacterQuestionAnswer, RagDocumentKind } from '@friend-workspace/contracts';
+import type {
+  CharacterKind,
+  CharacterQuestionAnswer,
+  RagDocumentKind,
+} from '@friend-workspace/contracts';
 
 import { createApiLlmRuntime } from './lib/vertex.js';
 import { PLAYGROUND_HTML } from './lib/ui.js';
@@ -54,6 +58,7 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
             'GET /learn/json-db',
             'GET /ui',
             'POST /users',
+            'GET /users/:userId/characters',
             'POST /characters',
             'POST /rag/documents',
             'POST /chat',
@@ -78,10 +83,18 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
         return sendJson(response, 201, user);
       }
 
+      if (request.method === 'GET' && /^\/users\/[^/]+\/characters$/.test(url.pathname)) {
+        const userId = decodeURIComponent(url.pathname.split('/')[2] ?? '');
+        const kind = parseCharacterKind(url.searchParams.get('kind'));
+        const characters = await workflow.listCharacters(userId, kind);
+        return sendJson(response, 200, characters);
+      }
+
       if (request.method === 'POST' && url.pathname === '/characters') {
         const body = await readJsonBody(request);
         const character = await workflow.createCharacter({
           userId: expectString(body.userId, 'userId'),
+          kind: parseCharacterKind(body.kind) ?? 'friend',
           name: expectString(body.name, 'name'),
           description: expectString(body.description, 'description'),
           answers: parseAnswers(body.answers),
@@ -140,11 +153,11 @@ function printDescribeMode(): void {
   const lines = [
     'friend api starter',
     'Mode: describe',
-    'This app keeps the agent workflow in one Nx monorepo.',
+    'This app keeps the agent workflow in one Nx monorepo and ships as one isolated API service.',
     'JSON path: users/<userId>/conversations/<conversationId>/messages/<YYYY-MM-DD>/chat-<HH-mm-ss-SSS>-<messageId>.json',
     ...workflow.describeStarterArchitecture(),
     `Current response mode: ${llmRuntime.llmMode}.`,
-    'Open /ui in a browser to create a user, seed a character, and test chat turns.',
+    'Open /ui in a browser to create an admin demo user, add friend/teacher characters, and test chat turns.',
   ];
 
   process.stdout.write(`${lines.join('\n')}\n`);
@@ -212,6 +225,26 @@ function optionalString(value: unknown): string | undefined {
 function parseAnswers(value: unknown): CharacterQuestionAnswer[] {
   if (!Array.isArray(value)) {
     throw Object.assign(new Error('Field "answers" must be an array.'), { statusCode: 400 });
+  }
+
+  function parseCharacterKind(value: unknown): CharacterKind | undefined {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+
+    const kind = optionalString(value);
+    const allowedKinds: CharacterKind[] = ['friend', 'teacher'];
+
+    if (!kind || !allowedKinds.includes(kind as CharacterKind)) {
+      throw Object.assign(
+        new Error(`Field "kind" must be one of: ${allowedKinds.join(', ')}.`),
+        {
+          statusCode: 400,
+        }
+      );
+    }
+
+    return kind as CharacterKind;
   }
 
   return value.map((entry, index) => {

@@ -4,7 +4,7 @@ Cost-first agentic AI starter in an Nx monorepo.
 
 ## What is in this repo
 
-- `apps/api`: a minimal Node API that demonstrates registration, character creation, RAG ingestion, chat orchestration, a browser playground, and optional Vertex-backed generation.
+- `apps/api`: a minimal Node API that demonstrates registration, admin-side friend/teacher character creation, RAG ingestion, chat orchestration, a browser playground, and optional Vertex-backed generation.
 - `apps/api-e2e`: smoke coverage for the learning-oriented CLI surface.
 - `packages/contracts`: shared types and repository interfaces.
 - `packages/json-store`: JSON-file persistence with simple indexes instead of a database.
@@ -34,7 +34,7 @@ and keeps side indexes such as:
 
 Each chat turn does more than call a model:
 
-1. load the character persona
+1. load the selected friend or teacher persona
 2. load recent chat
 3. load durable memory facts
 4. retrieve matching RAG chunks
@@ -42,7 +42,7 @@ Each chat turn does more than call a model:
 6. save the new conversation state
 7. periodically summarize older context
 
-The current starter uses a deterministic local demo reply by default so you can learn the workflow without paying for an LLM on day one, and can switch to Vertex-backed Gemini generation when Google Cloud environment variables are configured.
+The current starter uses deterministic local demo replies by default so you can compare friend-vs-teacher behavior without paying for an LLM on day one, and can switch to Vertex-backed Gemini generation when Google Cloud environment variables are configured.
 
 ## RAG data save model
 
@@ -71,4 +71,5 @@ At chat time the app searches the JSON index and injects only the top matching c
 - Runtime defaults are `HOST=0.0.0.0`, `PORT=3000`, and `DATA_DIR=/app/data`.
 - Optional Vertex runtime configuration uses `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEX_MODEL`, `VERTEX_TEMPERATURE`, and `VERTEX_MAX_OUTPUT_TOKENS`.
 - Mount persistent storage to the configured `DATA_DIR` path for JSON-backed app data.
-- Open `/ui` on the running API service for a basic manual test surface.
+- The API app is the isolated release unit for this public repository, so you can deploy one contained service without exposing private orchestration infrastructure.
+- Open `/ui` on the running API service for a basic admin test surface where you can add multiple friend and teacher characters with different names and compare their responses.
