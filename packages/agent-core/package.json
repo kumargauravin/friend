@@ -1,0 +1,26 @@
+{
+  "name": "@friend-workspace/agent-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@friend-workspace/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "agent-core"
+  },
+  "dependencies": {
+    "@friend-workspace/contracts": "0.0.1",
+    "@friend-workspace/rag-memory": "0.0.1",
+    "tslib": "^2.3.0"
+  }
+}
