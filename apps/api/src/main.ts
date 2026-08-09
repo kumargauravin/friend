@@ -8,6 +8,7 @@ import type { CharacterQuestionAnswer, RagDocumentKind } from '@friend-workspace
 
 const repository = new JsonFileRepository(resolve(process.cwd(), 'data'));
 const workflow = new AgentWorkflow(repository);
+const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
 
 if (process.env.FRIEND_RUN_MODE === 'describe') {
@@ -102,8 +103,8 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
     }
   });
 
-  server.listen(port, () => {
-    process.stdout.write(`friend api listening on http://localhost:${port}\n`);
+  server.listen(port, host, () => {
+    process.stdout.write(`friend api listening on http://${host}:${port}\n`);
   });
 }
 

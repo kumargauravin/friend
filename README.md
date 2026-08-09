@@ -62,3 +62,10 @@ At chat time the app searches the JSON index and injects only the top matching c
 - `npm run typecheck`
 - `npm run test:e2e`
 - `npm run serve:api`
+
+## Deploy
+
+- The API container is built from `apps/api/Dockerfile`.
+- CI runs lint, typecheck, build, and the API smoke test on pushes and pull requests to `main`.
+- The `Build and Publish API Image` workflow publishes `ghcr.io/<owner>/friend-api` on pushes to `main` and on manual dispatch.
+- Runtime defaults are `HOST=0.0.0.0` and `PORT=3000`.
