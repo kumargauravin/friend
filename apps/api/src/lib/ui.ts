@@ -87,7 +87,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
         <form id="setup-form">
           <div class="row">
             <label>Email <input name="email" type="email" value="demo@example.com" required /></label>
-            <label>Password <input name="password" type="text" value="demo-pass-123" required /></label>
+            <label>Password <input name="password" type="password" value="demo-pass-123" required /></label>
           </div>
           <div class="row">
             <label>Character name <input name="characterName" type="text" value="Mira" required /></label>

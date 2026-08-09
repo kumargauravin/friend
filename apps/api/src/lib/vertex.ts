@@ -36,7 +36,12 @@ export function createApiLlmRuntime(): ApiLlmRuntime {
     replyGenerator: async ({ promptPackage }) => {
       const response = await ai.models.generateContent({
         model,
-        contents: promptPackage.assembledPrompt,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: promptPackage.assembledPrompt }],
+          },
+        ],
         config: generationConfig,
       });
       const text = response.text?.trim();
