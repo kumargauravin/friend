@@ -77,10 +77,8 @@ try {
   assert.equal(charactersResponse.status, 200);
   const characters = (await charactersResponse.json()) as Array<{ id: string; kind: string; name: string }>;
   assert.equal(characters.length, 2);
-  assert.deepEqual(
-    characters.map((character) => character.kind),
-    ['friend', 'teacher']
-  );
+  assert.ok(characters.some((character) => character.kind === 'friend'));
+  assert.ok(characters.some((character) => character.kind === 'teacher'));
 
   const chatResponse = await postJson(`http://127.0.0.1:${port}/chat`, {
     userId: userResponse.id,

@@ -394,7 +394,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
         });
 
         characterPills.innerHTML = state.characters
-          .map((character) => '<span class="pill">' + character.kind + ': ' + escapeHtml(character.name) + '</span>')
+          .map((character) => '<span class="pill">' + escapeHtml(character.kind) + ': ' + escapeHtml(character.name) + '</span>')
           .join('');
 
         const selected = activeCharacter();
