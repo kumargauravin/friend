@@ -334,7 +334,16 @@ export const PLAYGROUND_HTML = `<!doctype html>
       }
 
       async function refreshCharacters(preferredCharacterId) {
-        const query = state.userId ? '/users/' + encodeURIComponent(state.userId) + '/characters' : '';
+        if (!state.userId) {
+          state.characters = [];
+          state.characterId = '';
+          state.conversationId = '';
+          renderCharacters();
+          renderState();
+          return;
+        }
+
+        const query = '/users/' + encodeURIComponent(state.userId) + '/characters';
         const characters = await fetch(query).then((response) => response.json());
         state.characters = Array.isArray(characters) ? characters : [];
         const nextCharacterId =

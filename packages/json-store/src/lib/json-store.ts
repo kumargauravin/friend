@@ -186,6 +186,14 @@ export class JsonFileRepository implements AgentRepository {
     }
 
     const { userId, characterId } = facts[0];
+    const mismatchedFact = facts.find(
+      (fact) => fact.userId !== userId || fact.characterId !== characterId
+    );
+
+    if (mismatchedFact) {
+      throw new Error('Memory facts must belong to the same user and character.');
+    }
+
     const storedFacts = await this.readJson<MemoryFactRecord[]>(this.memoryFactsPath(userId, characterId), []);
     const keyedFacts = new Map(storedFacts.map((fact) => [fact.fact.toLowerCase(), fact]));
 

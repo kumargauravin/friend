@@ -199,7 +199,10 @@ export class AgentWorkflow {
       (await this.repository.getConversation(input.userId, conversation.id)) ?? conversation;
     let summaryUpdated = false;
 
-    if (latestConversation.messageCount % this.options.summaryMessageInterval === 0) {
+    if (
+      latestConversation.messageCount > 0 &&
+      latestConversation.messageCount % this.options.summaryMessageInterval === 0
+    ) {
       const conversationMessages = await this.repository.listRecentMessages(
         input.userId,
         conversation.id,
