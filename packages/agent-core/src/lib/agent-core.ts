@@ -14,6 +14,7 @@ import type {
   MemoryFactRecord,
   PromptPackage,
   RagDocumentInput,
+  RagDocumentRecord,
   UserRecord,
 } from '@friend-workspace/contracts';
 import {
@@ -97,7 +98,7 @@ export class AgentWorkflow {
     return this.repository.listCharacters(userId, kind);
   }
 
-  async ingestRagDocument(input: RagDocumentInput) {
+  async ingestRagDocument(input: RagDocumentInput): Promise<RagDocumentRecord> {
     const existingUser = await this.repository.getUser(input.userId);
 
     if (!existingUser) {
@@ -321,7 +322,7 @@ export function buildPromptPackage(input: {
     userMessage: input.userMessage,
     assembledPrompt: [
       input.character.systemPrompt,
-      `User account: ${input.user.email}`,
+      `User profile reference: ${input.user.id}`,
       summaryBlock,
       `Durable facts:\n${factBlock}`,
       `RAG context:\n${ragBlock}`,

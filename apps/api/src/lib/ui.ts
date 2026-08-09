@@ -101,7 +101,7 @@ export const PLAYGROUND_HTML = `<!doctype html>
         <form id="setup-form">
           <div class="row">
             <label>Email <input name="email" type="email" value="demo@example.com" required /></label>
-            <label>Password <input name="password" type="password" value="demo-pass-123" required /></label>
+            <label>Password <input name="password" type="password" required /></label>
           </div>
           <button type="submit">Create admin demo user</button>
         </form>

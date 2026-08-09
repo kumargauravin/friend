@@ -185,7 +185,12 @@ export class JsonFileRepository implements AgentRepository {
       return [];
     }
 
-    const { userId, characterId } = facts[0];
+    const firstFact = facts[0];
+    if (!firstFact) {
+      return [];
+    }
+
+    const { userId, characterId } = firstFact;
     const mismatchedFact = facts.find(
       (fact) => fact.userId !== userId || fact.characterId !== characterId
     );

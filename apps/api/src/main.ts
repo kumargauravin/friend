@@ -84,7 +84,7 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
       }
 
       if (request.method === 'GET' && /^\/users\/[^/]+\/characters$/.test(url.pathname)) {
-        const userId = decodeURIComponent(url.pathname.split('/')[2] ?? '');
+        const userId = url.pathname.split('/')[2] ?? '';
         const kind = parseCharacterKind(url.searchParams.get('kind'));
         const characters = await workflow.listCharacters(userId, kind);
         return sendJson(response, 200, characters);
