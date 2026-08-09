@@ -25,8 +25,18 @@ import {
 } from '@friend-workspace/contracts';
 import { createRagDocument, describeRagStorageStrategy } from '@friend-workspace/rag-memory';
 
+export interface AgentReplyGeneratorInput {
+  character: CharacterProfile;
+  promptPackage: PromptPackage;
+}
+
+export type AgentReplyGenerator = (
+  input: AgentReplyGeneratorInput
+) => Promise<string>;
+
 export class AgentWorkflow {
   private readonly options: Required<AgentWorkflowOptions>;
+  private readonly replyGenerator?: AgentReplyGenerator;
 
   constructor(private readonly repository: AgentRepository, options: AgentWorkflowOptions = {}) {
     this.options = {
@@ -35,6 +45,7 @@ export class AgentWorkflow {
       ragResultLimit: options.ragResultLimit ?? DEFAULT_RAG_RESULT_LIMIT,
       summaryMessageInterval: options.summaryMessageInterval ?? DEFAULT_SUMMARY_MESSAGE_INTERVAL,
     };
+    this.replyGenerator = options.replyGenerator;
   }
 
   async registerUser(input: CreateUserInput): Promise<UserRecord> {
@@ -138,13 +149,17 @@ export class AgentWorkflow {
       userMessage,
     });
 
+    const assistantReply = this.replyGenerator
+      ? await this.replyGenerator({ character, promptPackage })
+      : createLocalDemoReply(character, promptPackage);
+
     const assistantMessage = await this.repository.appendMessage(
       createMessageRecord({
         userId: input.userId,
         characterId: input.characterId,
         conversationId: conversation.id,
         role: 'assistant',
-        content: createLocalDemoReply(character, promptPackage),
+        content: assistantReply,
       })
     );
 
@@ -290,7 +305,7 @@ export function buildPromptPackage(input: {
   };
 }
 
-function createLocalDemoReply(character: CharacterProfile, promptPackage: PromptPackage): string {
+export function createLocalDemoReply(character: CharacterProfile, promptPackage: PromptPackage): string {
   const strongestFact = promptPackage.memoryFacts[0]?.fact ?? 'no saved facts yet';
   const strongestRag = promptPackage.ragContext[0]?.documentTitle ?? 'no RAG source';
 

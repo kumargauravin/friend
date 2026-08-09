@@ -107,6 +107,7 @@
   "dependencies": {
     "@friend-workspace/agent-core": "0.0.1",
     "@friend-workspace/contracts": "0.0.1",
-    "@friend-workspace/json-store": "0.0.1"
+    "@friend-workspace/json-store": "0.0.1",
+    "@google/genai": "^2.16.0"
   }
 }

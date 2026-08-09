@@ -1,4 +1,5 @@
 import { randomBytes, scryptSync } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 
@@ -6,13 +7,19 @@ import { AgentWorkflow } from '@friend-workspace/agent-core';
 import { JsonFileRepository } from '@friend-workspace/json-store';
 import type { CharacterQuestionAnswer, RagDocumentKind } from '@friend-workspace/contracts';
 
+import { createApiLlmRuntime } from './lib/vertex.js';
+
 const dataDirectory = process.env.DATA_DIR
   ? resolve(process.env.DATA_DIR)
   : resolve(process.cwd(), 'data');
 const repository = new JsonFileRepository(dataDirectory);
-const workflow = new AgentWorkflow(repository);
+const llmRuntime = createApiLlmRuntime();
+const workflow = new AgentWorkflow(repository, {
+  replyGenerator: llmRuntime.replyGenerator,
+});
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
+const uiFilePath = resolve(__dirname, 'assets', 'index.html');
 
 if (process.env.FRIEND_RUN_MODE === 'describe') {
   printDescribeMode();
@@ -22,7 +29,7 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
       const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 
       if (request.method === 'GET' && url.pathname === '/health') {
-        return sendJson(response, 200, { ok: true });
+        return sendJson(response, 200, { ok: true, llmMode: llmRuntime.llmMode });
       }
 
       if (request.method === 'GET' && url.pathname === '/learn/json-db') {
@@ -33,11 +40,30 @@ if (process.env.FRIEND_RUN_MODE === 'describe') {
         });
       }
 
+      if (
+        request.method === 'GET' &&
+        (url.pathname === '/ui' || (url.pathname === '/' && requestAcceptsHtml(request)))
+      ) {
+        return sendHtml(response, 200, await readFile(uiFilePath, 'utf8'));
+      }
+
       if (request.method === 'GET' && url.pathname === '/') {
         return sendJson(response, 200, {
           name: 'friend api starter',
-          endpoints: ['GET /health', 'GET /learn/json-db', 'POST /users', 'POST /characters', 'POST /rag/documents', 'POST /chat'],
-          llmMode: 'local demo reply',
+          endpoints: [
+            'GET /health',
+            'GET /learn/json-db',
+            'GET /ui',
+            'POST /users',
+            'POST /characters',
+            'POST /rag/documents',
+            'POST /chat',
+          ],
+          llmMode: llmRuntime.llmMode,
+          vertexConfigured: llmRuntime.vertexConfigured,
+          vertexLocation: llmRuntime.vertexLocation,
+          vertexModel: llmRuntime.vertexModel,
+          uiPath: '/ui',
         });
       }
 
@@ -118,7 +144,8 @@ function printDescribeMode(): void {
     'This app keeps the agent workflow in one Nx monorepo.',
     'JSON path: users/<userId>/conversations/<conversationId>/messages/<YYYY-MM-DD>/chat-<HH-mm-ss-SSS>-<messageId>.json',
     ...workflow.describeStarterArchitecture(),
-    'Next production step: replace the local demo reply with a hosted Gemini or similar LLM call.',
+    `Current response mode: ${llmRuntime.llmMode}.`,
+    'Open /ui in a browser to create a user, seed a character, and test chat turns.',
   ];
 
   process.stdout.write(`${lines.join('\n')}\n`);
@@ -152,6 +179,21 @@ function sendJson(
   response.statusCode = statusCode;
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.end(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function sendHtml(
+  response: ServerResponse<IncomingMessage>,
+  statusCode: number,
+  payload: string
+): void {
+  response.statusCode = statusCode;
+  response.setHeader('content-type', 'text/html; charset=utf-8');
+  response.end(payload);
+}
+
+function requestAcceptsHtml(request: IncomingMessage): boolean {
+  const accept = request.headers.accept ?? '';
+  return accept.includes('text/html');
 }
 
 function expectString(value: unknown, fieldName: string): string {

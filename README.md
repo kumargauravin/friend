@@ -4,7 +4,7 @@ Cost-first agentic AI starter in an Nx monorepo.
 
 ## What is in this repo
 
-- `apps/api`: a minimal Node API that demonstrates registration, character creation, RAG ingestion, and chat orchestration.
+- `apps/api`: a minimal Node API that demonstrates registration, character creation, RAG ingestion, chat orchestration, a browser playground, and optional Vertex-backed generation.
 - `apps/api-e2e`: smoke coverage for the learning-oriented CLI surface.
 - `packages/contracts`: shared types and repository interfaces.
 - `packages/json-store`: JSON-file persistence with simple indexes instead of a database.
@@ -42,7 +42,7 @@ Each chat turn does more than call a model:
 6. save the new conversation state
 7. periodically summarize older context
 
-The current starter uses a deterministic local demo reply so you can learn the workflow without paying for an LLM on day one.
+The current starter uses a deterministic local demo reply by default so you can learn the workflow without paying for an LLM on day one, and can switch to Vertex-backed Gemini generation when Google Cloud environment variables are configured.
 
 ## RAG data save model
 
@@ -69,4 +69,6 @@ At chat time the app searches the JSON index and injects only the top matching c
 - CI runs lint, typecheck, build, and the API smoke test on pushes and pull requests to `main`.
 - The `Build and Publish API Image` workflow publishes `ghcr.io/<owner>/friend-api` on pushes to `main` and on manual dispatch.
 - Runtime defaults are `HOST=0.0.0.0`, `PORT=3000`, and `DATA_DIR=/app/data`.
+- Optional Vertex runtime configuration uses `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEX_MODEL`, `VERTEX_TEMPERATURE`, and `VERTEX_MAX_OUTPUT_TOKENS`.
 - Mount persistent storage to the configured `DATA_DIR` path for JSON-backed app data.
+- Open `/ui` on the running API service for a basic manual test surface.

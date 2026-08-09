@@ -7,15 +7,18 @@ The runnable backend entrypoint for the monorepo.
 - Replaced the hello-world placeholder with a small Node HTTP API.
 - Added endpoints for user registration, character creation, RAG ingestion, and chat turns.
 - Added a `FRIEND_RUN_MODE=describe` mode so the workflow can be explained and tested without starting a long-lived server.
+- Added a browser playground at `/ui` for manual setup and chat testing.
+- Added a Vertex-ready reply path that activates when Google Cloud environment variables are present.
 
 ## Why it exists
 
-This app is where the agent workflow becomes visible end to end. It shows the request flow you would later connect to Vertex AI, OpenAI, or another hosted LLM.
+This app is where the agent workflow becomes visible end to end. It now runs with a local demo reply by default and switches to Vertex-backed Gemini responses when configured.
 
 ## Endpoints
 
 - `GET /health`
 - `GET /learn/json-db`
+- `GET /ui`
 - `POST /users`
 - `POST /characters`
 - `POST /rag/documents`
@@ -24,3 +27,15 @@ This app is where the agent workflow becomes visible end to end. It shows the re
 ## Run
 
 Use `npm run serve:api`.
+
+## Vertex configuration
+
+Set these environment variables to use Vertex-backed responses:
+
+- `GOOGLE_CLOUD_PROJECT`
+- `GOOGLE_CLOUD_LOCATION` (optional, defaults to `global`)
+- `VERTEX_MODEL` (optional, defaults to `gemini-2.5-flash`)
+- `VERTEX_TEMPERATURE` (optional)
+- `VERTEX_MAX_OUTPUT_TOKENS` (optional)
+
+The service uses Google application default credentials for authentication.
